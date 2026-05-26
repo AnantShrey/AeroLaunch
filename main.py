@@ -10,9 +10,9 @@ MASS  = 0.5     # Mass of projectile (kg)
 AREA = numpy.pi * (RADIUS ** 2)
 DT = 0.005      # Time step (sec)
 
-def run_simulation(v0, angle_deg, v_wind):
+def run_simulation(v0, angle_deg, v_wind, drag=True):
     """
-    Simulates the flight of a projectile with air resistance. Returns: (list of x and y coordinates and final range)
+    Simulates the flight of a projectile with or without air resistance. Returns: (list of x and y coordinates and final range)
     """
     
     angle_rad = numpy.radians(angle_deg)
@@ -35,10 +35,13 @@ def run_simulation(v0, angle_deg, v_wind):
 
         # Forces (Fd = 0.5 * rho * v^2 * Cd * A)
         # a = Fd/m -> we include one 'v' in the drag_factor to handle components easily
-        drag = 0.5 * RHO * v_rel * CD * AREA / MASS
+        if drag:
+            drag_val = 0.5 * RHO * v_rel * CD * AREA / MASS
+        else:
+            drag_val = 0.0
 
-        ax = -(drag * v_rel_x)
-        ay = - G - (drag * v_rel_y)
+        ax = -(drag_val * v_rel_x)
+        ay = - G - (drag_val * v_rel_y)
 
         # Updating Velocities
         vx += ax * DT
@@ -58,7 +61,7 @@ def run_simulation(v0, angle_deg, v_wind):
     
     return x_path, y_path, x
 
-def find_optimal_angle(v0, v_wind):
+def find_optimal_angle(v0, v_wind, drag=True):
     """
     Iterates through angles to find which one produces the maximum range. Returns: (best_angle, best_x_path, best_y_path)
     """
@@ -68,7 +71,7 @@ def find_optimal_angle(v0, v_wind):
 
     for i in range(0,180):
         angle = i * 0.5
-        x_pts, y_pts, final_range = run_simulation(v0, angle, v_wind)
+        x_pts, y_pts, final_range = run_simulation(v0, angle, v_wind, drag=drag)
 
         if final_range > best_range:
             best_range = final_range
@@ -82,27 +85,39 @@ def main():
         user_v0 = float(input("Enter Initial Velocity (m/s): "))
         user_angle = float(input("Enter Launch Angle (degrees): "))
         user_v_wind = float(input("Enter Wind Speed (m/s, positive for tailwind, negative for headwind): "))
+        user_drag_str = input("Include drag? (y/n): ").strip().lower()
     except ValueError:
         print("Invalid input. Please enter numbers.")
         return
 
+    user_drag = user_drag_str == 'y'
+
     # Simulation for user input
-    u_x, u_y, u_range = run_simulation(user_v0, user_angle, user_v_wind)
+    u_x_drag, u_y_drag, u_range_drag = run_simulation(user_v0, user_angle, user_v_wind, drag=True)
+    u_x_nodrag, u_y_nodrag, u_range_nodrag = run_simulation(user_v0, user_angle, user_v_wind, drag=False)
 
     # Optimizer
-    opt_angle, opt_x, opt_y, opt_range = find_optimal_angle(user_v0, user_v_wind)
+    opt_angle_drag, opt_x_drag, opt_y_drag, opt_range_drag = find_optimal_angle(user_v0, user_v_wind, drag=True)
+    opt_angle_nodrag, opt_x_nodrag, opt_y_nodrag, opt_range_nodrag = find_optimal_angle(user_v0, user_v_wind, drag=False)
 
     print(f"\n---Results---")
-    print(f"User angle: {user_angle} | Range: {u_range:.2f}")
-    print(f"Optimal angle: {opt_angle} | Range: {opt_range:.2f}")
+    print(f"User Drag Choice: {'Yes' if user_drag else 'No'}")
+    print(f"[With Drag]")
+    print(f"User angle: {user_angle} | Range: {u_range_drag:.2f}")
+    print(f"Optimal angle: {opt_angle_drag} | Range: {opt_range_drag:.2f}")
+    print(f"[Without Drag]")
+    print(f"User angle: {user_angle} | Range: {u_range_nodrag:.2f}")
+    print(f"Optimal angle: {opt_angle_nodrag} | Range: {opt_range_nodrag:.2f}")
 
     # Plotting
     plot.figure(figsize=(10, 5))
-    plot.plot(u_x, u_y, label=f"User Angle ({user_angle}°)", color='blue', linewidth=2)
-    plot.plot(opt_x, opt_y, label=f"Optimal Angle ({opt_angle}°)", color='red', linestyle='--')
+    plot.plot(u_x_drag, u_y_drag, label=f"User Angle ({user_angle}°) w/ Drag", color='blue', linewidth=2)
+    plot.plot(u_x_nodrag, u_y_nodrag, label=f"User Angle ({user_angle}°) w/o Drag", color='cyan', linewidth=2)
+    plot.plot(opt_x_drag, opt_y_drag, label=f"Optimal Angle ({opt_angle_drag}°) w/ Drag", color='red', linestyle='--')
+    plot.plot(opt_x_nodrag, opt_y_nodrag, label=f"Optimal Angle ({opt_angle_nodrag}°) w/o Drag", color='orange', linestyle='--')
     
     plot.axhline(0, color='black', lw=1) # Ground line
-    plot.title(f"Projectile Motion with Air Resistance & Wind (v0 = {user_v0} m/s and v-wind = {user_v_wind} m/s)")
+    plot.title(f"Projectile Motion (v0 = {user_v0} m/s and v-wind = {user_v_wind} m/s)")
     plot.xlabel("Distance (m)")
     plot.ylabel("Height (m)")
     plot.legend()
