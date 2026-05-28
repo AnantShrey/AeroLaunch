@@ -158,7 +158,7 @@ Using: RK4 Method
 [With Drag]    User 45.0° → 142.22 m | Optimal 40.47° → 143.52 m
 [Without Drag] User 45.0° → 254.88 m | Optimal 45.00° → 254.88 m
 ```
-
+![Sample Screenshot](graph_output.png)
 ---
 
 ## Key Findings
