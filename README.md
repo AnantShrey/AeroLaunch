@@ -1,142 +1,223 @@
-# Projectile Motion with Air Resistance
+# ▶ Interactive Dashboard (Google Colab)
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/YOUR_REPO/blob/main/projectile_motion.ipynb)
-
-> **Replace** `YOUR_USERNAME` and `YOUR_REPO` in the badge URL above with your actual GitHub username and repository name.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](YOUR_NOTEBOOK_LINK_HERE)
 
 ---
 
-## Overview
+# AeroLaunch — Advanced Projectile Motion Simulator
 
-A numerical simulation of projectile motion that models the effect of **aerodynamic drag** and **altitude-varying air density** on a spherical projectile. Two integration methods are implemented and compared:
+AeroLaunch is a computational physics simulator that models projectile motion under realistic atmospheric conditions.
 
-| Method | File | Accuracy | Notes |
-|---|---|---|---|
-| Euler (1st-order) | `main_euler.py` | Lower | Faster, accumulates error over time |
-| Runge-Kutta 4 (RK4) | `main_rk4.py` | Higher | Industry-standard, 4-stage per step |
+Unlike ideal textbook projectile equations, AeroLaunch includes:
 
-Both methods support wind, drag toggling, and automatic optimal-angle finding.
+* Air resistance (drag force)
+* Wind effects
+* Atmospheric density variation
+* Numerical integration methods
+* Optimal launch-angle calculation
+* Interactive dashboard visualizations
 
----
+The simulator compares the performance of:
 
-## Physics Model
-
-### Drag Force
-
-$$F_d = \frac{1}{2} \rho \, v_{rel}^2 \, C_d \, A$$
-
-where $v_{rel}$ is the velocity of the projectile **relative to the wind**.
-
-### Altitude-Dependent Air Density (RK4 only)
-
-The RK4 model uses the **barometric formula** to vary air density with height:
-
-$$\rho(y) = \rho_0 \, \exp\!\left(\frac{-M \cdot g \cdot y}{R \cdot T}\right)$$
-
-The Euler model uses a constant $\rho = \rho_0$ (sea-level density).
-
-### Equations of Motion
-
-$$a_x = -\frac{F_d}{m} \cdot \hat{v}_{rel,x}, \qquad a_y = -g - \frac{F_d}{m} \cdot \hat{v}_{rel,y}$$
+1. Euler Method
+2. Fourth-Order Runge-Kutta (RK4) Method
 
 ---
 
-## Features
+# Features
 
-- **Drag on/off** — compare ideal vs real trajectories side by side
-- **Wind support** — headwind (positive) and tailwind (negative)
-- **Optimal angle finder** — brute-force (Euler) and `scipy.optimize` (RK4)
-- **Altitude-varying density** — physically accurate at higher trajectories (RK4)
-- **Interactive Colab dashboard** — sliders for all parameters, live plots
+## Physics Features
 
----
+* Gravity simulation
+* Aerodynamic drag
+* Headwind/tailwind support
+* Altitude-dependent air density
+* Optimal trajectory calculation
 
-## Project Structure
+## Numerical Methods
 
-```
-.
-├── constants.py          # Shared physical constants
-├── main_euler.py         # Euler method simulation + optimizer
-├── main_rk4.py           # RK4 simulation + scipy optimizer
-├── projectile_motion.ipynb  # Interactive Colab notebook
-└── README.md
-```
+### Euler Method
 
----
+Simple first-order numerical integration.
 
-## Physical Parameters (constants.py)
+### RK4 Method
 
-| Constant | Symbol | Value | Unit |
-|---|---|---|---|
-| Gravitational acceleration | $g$ | 9.81 | m/s² |
-| Sea-level air density | $\rho_0$ | 1.225 | kg/m³ |
-| Drag coefficient (sphere) | $C_d$ | 0.47 | — |
-| Projectile radius | $r$ | 0.05 | m |
-| Projectile mass | $m$ | 0.5 | kg |
-| Time step | $\Delta t$ | 0.001 | s |
-| Molar mass of air | $M$ | 0.029 | kg/mol |
-| Universal gas constant | $R$ | 8.314 | J/mol·K |
-| Standard sea-level temperature | $T$ | 288.15 | K |
+Higher-accuracy fourth-order numerical integration.
+
+## Interactive Dashboard
+
+The Jupyter Notebook includes:
+
+* Interactive sliders
+* Real-time graph updates
+* Numerical method selection
+* Wind control
+* Launch angle optimization
 
 ---
 
-## Running Locally
+# Mathematical Model
 
-**Requirements:**
-```
-numpy
-matplotlib
-scipy
-```
+Projectile motion is governed by:
 
-Install with:
+## Gravity
+
+a_y=-g
+
+where:
+
+* ( g = 9.81 , \text{m/s}^2 )
+
+---
+
+## Drag Force
+
+F_d=\frac{1}{2}\rho v_{rel}^2 C_d A
+
+where:
+
+* ( \rho ) = Air density
+* ( v_{rel} ) = Relative velocity
+* ( C_d ) = Drag coefficient
+* ( A ) = Cross-sectional area
+
+---
+
+## Relative Velocity
+
+v_{rel}=\sqrt{(v_x+v_{wind})^2+v_y^2}
+
+---
+
+## Atmospheric Density Variation
+
+The RK4 simulation models atmospheric density using:
+
+\rho(y)=\rho_0 e^{-\frac{MMgy}{RT}}
+
+This makes the simulation more realistic at higher altitudes.
+
+---
+
+# Numerical Methods
+
+## Euler Method
+
+Euler integration updates velocity and position using:
+
+v_{new}=v_{old}+a\Delta t
+
+It is computationally simple but less accurate.
+
+---
+
+## RK4 Method
+
+The Fourth-Order Runge-Kutta method estimates multiple intermediate slopes to improve numerical accuracy.
+
+RK4 generally produces:
+
+* smoother trajectories
+* better energy behavior
+* improved accuracy for long simulations
+
+---
+
+# Installation
+
+## Requirements
+
+Install Python packages:
+
 ```bash
-pip install numpy matplotlib scipy
+pip install numpy matplotlib scipy ipywidgets
 ```
 
-**Run Euler simulation:**
+---
+
+# Running Locally
+
+## Python Script
+
 ```bash
-python -m projectile.main_euler
+python main.py
 ```
 
-**Run RK4 simulation:**
-```bash
-python -m projectile.main_rk4
-```
+The program will:
 
-> Both scripts prompt for initial velocity, launch angle, and wind speed in the terminal.
+1. Ask for simulation parameters
+2. Ask for numerical method selection
+3. Display trajectory plots
+4. Compute optimal launch angle
 
 ---
 
-## Sample Output
+# Running the Interactive Dashboard
 
+Open:
+
+```plaintext
+AeroLaunch_with_Interactive_Dashboard.ipynb
 ```
-Enter Initial Velocity (m/s): 50
-Enter Launch Angle (degrees): 40
-Enter Wind Speed (m/s, positive for headwind, negative for tailwind): 5
 
----Results---
-[With Drag]
-User angle: 40.0   | Range: 142.73 m
-Optimal angle: 38.5 | Range: 144.91 m
-[Without Drag]
-User angle: 40.0   | Range: 254.81 m
-Optimal angle: 45.0 | Range: 255.10 m
+Run all notebook cells.
+
+The dashboard allows real-time parameter adjustment using sliders.
+
+---
+
+# Interactive Dashboard Controls
+
+| Control          | Description         |
+| ---------------- | ------------------- |
+| Initial Velocity | Launch speed        |
+| Launch Angle     | Angle of projection |
+| Wind Speed       | Headwind/tailwind   |
+| Numerical Method | Euler or RK4        |
+| Drag Toggle      | Enable/disable drag |
+
+---
+
+# Project Structure
+
+```plaintext
+AeroLaunch/
+│
+├── main.py
+├── AeroLaunch_with_Interactive_Dashboard.ipynb
+├── README.md
+├── graph_output.png
+└── requirements.txt
 ```
 
 ---
 
-## Key Observations
+# Future Improvements
 
-- Drag significantly **reduces range** and **lowers the optimal launch angle** below 45°
-- Headwind reduces range further and pushes the optimal angle even lower
-- Tailwind increases range and raises the optimal angle slightly
-- RK4 with altitude-varying density gives a slightly shorter range at high $v_0$ due to thinner air at peak height reducing drag — a physically accurate effect
+Potential future upgrades include:
+
+* Magnus effect (spin)
+* Variable launch height
+* 3D projectile motion
+* Real-time animation
+* Multiple projectile types
+* GPU acceleration
 
 ---
 
-## Acknowledgements
+# Educational Value
 
-- Physics formulation inspired by the **Feynman Lectures on Physics**
-- Numerical methods reference: *Numerical Analysis* — Burden & Faires
-- Part of a high-school research paper on air resistance effects in projectile motion
+This project demonstrates concepts from:
+
+* Physics
+* Numerical Methods
+* Computational Simulation
+* Optimization
+* Data Visualization
+* Scientific Computing
+
+---
+
+# Author
+
+Anant Shrey
