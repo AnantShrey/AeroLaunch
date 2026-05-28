@@ -1,6 +1,6 @@
 # AeroLaunch — Projectile Motion Optimizer: Beyond the Ideal Vacuum
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1NVpikPbBux1LW-qtTFqP8v4wTAZWXnAg?usp=sharing)
+![Open In Web](https://aerolaunch-anantshrey.streamlit.app/)
 **← Interactive dashboard — runs in your browser, no installation needed**
 
 ---
