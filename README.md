@@ -1,223 +1,143 @@
-# ▶ Interactive Dashboard (Google Colab)
+▶ Run interactively on Google Colab.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](YOUR_NOTEBOOK_LINK_HERE)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1uqO8zvH7T81Gpb6w5tRY26bEYpnUGjR3)
 
----
 
-# AeroLaunch — Advanced Projectile Motion Simulator
 
-AeroLaunch is a computational physics simulator that models projectile motion under realistic atmospheric conditions.
 
-Unlike ideal textbook projectile equations, AeroLaunch includes:
+# **AeroLaunch - Projectile Motion Optimizer: Beyond the Ideal Vacuum**
 
-* Air resistance (drag force)
-* Wind effects
-* Atmospheric density variation
-* Numerical integration methods
-* Optimal launch-angle calculation
-* Interactive dashboard visualizations
 
-The simulator compares the performance of:
 
-1. Euler Method
-2. Fourth-Order Runge-Kutta (RK4) Method
+## **1. Project Goal**
 
----
+This goal of this program is to calculate the trajectory of an object
+while accounting for the friction and environmental factors it
+encounters in the atmosphere. By calculating how air density and wind
+speed impact a projectile, we can determine the specific angle required
+to achieve the greatest possible distance.
 
-# Features
 
-## Physics Features
 
-* Gravity simulation
-* Aerodynamic drag
-* Headwind/tailwind support
-* Altitude-dependent air density
-* Optimal trajectory calculation
+## **2. How the Math Works**
 
-## Numerical Methods
+In a standard physics classroom, often ignore air resistance (and wind).
+However, in this optimizer, we account for two main forces that dictate
+where the projectile will land.
 
-### Euler Method
+### **2.1 Gravity (The Downward Pull)**
 
-Simple first-order numerical integration.
+Gravity acts constantly on the verical component of the projectile\'s
+motion. In this simulation, we use the standard acceleration due to
+gravity:
 
-### RK4 Method
+-   $g = 9.81 \ \text{m/s}^2$ : This force pulls the object toward the
+    ground, creating the \"arc\" of the flight.
 
-Higher-accuracy fourth-order numerical integration.
+### **2.2 Air Resistance (The Backward Push)**
 
-## Interactive Dashboard
+Air resistance, or drag, pushes against the projectile in the opposite
+direction of its motion. Unlike gravity, drag changes based on how fast
+the object is moving. It is calculated using:
 
-The Jupyter Notebook includes:
+-   **$\rho \text{(Rho)}$ :** The density of the air ($1.225 \text{kg/m}^3$
+    at sea level).
+-   **$v_{rel}$ :** The instantaneous velocity of the projectile
+    relative to the wind.
+-   **$C_d$ :** The drag coefficient, representing how aerodynamic the
+    shape is ($0.47$ for a sphere).
+-   **$A$ :** The cross-sectional area of the projectile.
 
-* Interactive sliders
-* Real-time graph updates
-* Numerical method selection
-* Wind control
-* Launch angle optimization
+The formula used for the Drag Factor ($F_d$) (later divided by $m$ and
+multiplied with components of relative velocity to get $a_x$ and $a_y$)
+is:
+  
+$$F_d = \frac{1}{2}\rho v_{rel} C_d A$$
 
----
+The formula for components of acceleration are:
+  
+$$a_x = -\left(\frac{\rho  \  v_{rel}  \  C_d A}{2}\right)\cdot \frac{v_{rel \ x}}{m}$$
+  
+$$a_y = -g - \left(\frac{\rho  \  v_{rel}  \  C_d A}{2}\right) \cdot \frac{v_{rel \ y}}{m}$$
 
-# Mathematical Model
+### **2.3 Calculating Motion Step-by-Step**
 
-Projectile motion is governed by:
+Because the drag force depends on the velocity ($v^2$), the math changes
+at every instant. We cannot use a single simple formula to find the
+landing spot and range. Instead, the program uses the **Euler Method**.
+It breaks the flight into tiny slices of time ($\Delta t = 0.005$
+seconds) and calculates the new position for each slice using a loop:
 
-## Gravity
+1.  **Calculate Relative Velocity :** Find the relative velocity and its
+    component with respect to air, considering wind (horizontal)
+      
+    $$v_{rel} = \sqrt{(v_x + v_{wind})^2 + v_y^2}$$
+2.  **Calculate Forces :** Find the current drag factor to be divided by
+    $m$ and multiplied with components of relative velocity to get $a_x$
+    and $a_y$ in the next step.
+      
+    $$F_d = \frac{1}{2}\rho v_{rel} C_d A$$
+3.  **Calculate Acceleration :** Finding the components of acceleration
+    from the forces
+      
+    $$a_x = -\left(\frac{F_d}{m}\right)\cdot v_{rel \ x}$$
+      
+    $$a_y = -g - \left(\frac{F_d}{m}\right) \cdot v_{rel \ y}$$
+4.  **Update Velocity :** Adjust the components of velocity based on
+    those acceleration.
+      
+    $$v_{new} = v_{old} + a \cdot \Delta t$$
+5.  **Update Position :** Move the projectile a tiny bit based on the
+    new velocity in both directions.
+      
+    $$pos_{new} = pos_{old} + v_{new} \cdot \Delta t$$
+6.  **Repeat :** Continue until the object hits the ground ($y < 0$).
 
-a_y=-g
+*(The program exits if range exceeds 100 kilometers to prevent infinite
+looping)*
 
-where:
 
-* ( g = 9.81 , \text{m/s}^2 )
 
----
+## **3. The Optimization Logic**
 
-## Drag Force
+The \"Optimizer\" part of the code is a loop that tests 180 different
+scenarios. It simulates a launch at every half-degree from $0^°$ to
+$90^°$ to see which one travels the furthest.
 
-F_d=\frac{1}{2}\rho v_{rel}^2 C_d A
+In a world without air, $45^°$ is the best angle. However, with air
+resistance and wind:
 
-where:
+-   **Headwinds** (wind blowing against the object) usually require a
+    lower launch angle for maximum range.
+-   **Tailwinds** (wind blowing with the object) allow for a higher
+    launch angle.
 
-* ( \rho ) = Air density
-* ( v_{rel} ) = Relative velocity
-* ( C_d ) = Drag coefficient
-* ( A ) = Cross-sectional area
 
----
 
-## Relative Velocity
+## **4. Running the Program**
 
-v_{rel}=\sqrt{(v_x+v_{wind})^2+v_y^2}
+The program can be run locally after meeting the requirements mentioned in section 4.1 or by using the dashboard interface on [Google Colab](https://colab.research.google.com/drive/1uqO8zvH7T81Gpb6w5tRY26bEYpnUGjR3).
 
----
+### **4.1 Requirements**
 
-## Atmospheric Density Variation
+To run the AeroLaunch application locally, you will need:
+1. Python installed on your system.
+2. The packages 'matplotlib' and 'numpy' installed via pip.
 
-The RK4 simulation models atmospheric density using:
+### **4.2 Output**
 
-\rho(y)=\rho_0 e^{-\frac{MMgy}{RT}}
+After running the python program (main.py) and inputting the initial velocity ($\text{v0}$), angle of projection ($\theta$) and velocity of wind (positive for headwind/negative for tailwind). The terminal will display the inputted angle along with its range and the optimal angle with its range. Then a graph built using matplotlib will open in a new separate window automatically. The graph will display the path of the object. It will look like this:
+![Demo](graph_output.png)
 
-This makes the simulation more realistic at higher altitudes.
 
----
 
-# Numerical Methods
+## **5. Potential Upgrades**
 
-## Euler Method
+To make this simulation even more realistic. future versions could
+include:
 
-Euler integration updates velocity and position using:
+-   **Variable Initial Height :** Adjusting the equations for $y$-axis
+    to allow calculations for projectile launched from some height.
 
-v_{new}=v_{old}+a\Delta t
-
-It is computationally simple but less accurate.
-
----
-
-## RK4 Method
-
-The Fourth-Order Runge-Kutta method estimates multiple intermediate slopes to improve numerical accuracy.
-
-RK4 generally produces:
-
-* smoother trajectories
-* better energy behavior
-* improved accuracy for long simulations
-
----
-
-# Installation
-
-## Requirements
-
-Install Python packages:
-
-```bash
-pip install numpy matplotlib scipy ipywidgets
-```
-
----
-
-# Running Locally
-
-## Python Script
-
-```bash
-python main.py
-```
-
-The program will:
-
-1. Ask for simulation parameters
-2. Ask for numerical method selection
-3. Display trajectory plots
-4. Compute optimal launch angle
-
----
-
-# Running the Interactive Dashboard
-
-Open:
-
-```plaintext
-AeroLaunch_with_Interactive_Dashboard.ipynb
-```
-
-Run all notebook cells.
-
-The dashboard allows real-time parameter adjustment using sliders.
-
----
-
-# Interactive Dashboard Controls
-
-| Control          | Description         |
-| ---------------- | ------------------- |
-| Initial Velocity | Launch speed        |
-| Launch Angle     | Angle of projection |
-| Wind Speed       | Headwind/tailwind   |
-| Numerical Method | Euler or RK4        |
-| Drag Toggle      | Enable/disable drag |
-
----
-
-# Project Structure
-
-```plaintext
-AeroLaunch/
-│
-├── main.py
-├── AeroLaunch_with_Interactive_Dashboard.ipynb
-├── README.md
-├── graph_output.png
-└── requirements.txt
-```
-
----
-
-# Future Improvements
-
-Potential future upgrades include:
-
-* Magnus effect (spin)
-* Variable launch height
-* 3D projectile motion
-* Real-time animation
-* Multiple projectile types
-* GPU acceleration
-
----
-
-# Educational Value
-
-This project demonstrates concepts from:
-
-* Physics
-* Numerical Methods
-* Computational Simulation
-* Optimization
-* Data Visualization
-* Scientific Computing
-
----
-
-# Author
-
-Anant Shrey
+-   **Magnus Effect :** Calculating how the \"spin/rotation\" of a ball
+    (like a football or baseball) affect lift.
