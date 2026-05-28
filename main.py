@@ -1,129 +1,582 @@
-import numpy
-import matplotlib.pyplot as plot
+"""
+Projectile Motion Simulator
+---------------------------
 
-# Constants
-G = 9.81        # Acceleration due to gravity (m/s^2)
-RHO = 1.225     # Air density at sea level (kg/m^3)
-CD = 0.47       # Drag Coefficient for a sphere
-RADIUS = 0.05   # Radius of projectile (meters)
-MASS  = 0.5     # Mass of projectile (kg)
-AREA = numpy.pi * (RADIUS ** 2)
-DT = 0.005      # Time step (sec)
+This program simulates projectile motion with and without
+air resistance using two numerical methods:
 
-def run_simulation(v0, angle_deg, v_wind, drag=True):
+1. Euler Method
+2. Fourth-Order Runge-Kutta (RK4) Method
+
+Features:
+- Wind resistance
+- Optional drag force
+- Atmospheric density variation
+- Optimal launch angle calculation
+- Trajectory plotting
+
+Author: Anant Shrey
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import minimize_scalar
+
+
+# =========================================================
+# PHYSICAL CONSTANTS
+# =========================================================
+
+# Gravitational acceleration (m/s²)
+G = 9.81
+
+# Air properties
+RHO = 1.225          # Air density at sea level (kg/m³)
+MM = 0.029           # Molar mass of air (kg/mol)
+R = 8.314            # Universal gas constant (J/mol·K)
+T = 288.15           # Standard temperature at sea level (K)
+
+# Projectile properties
+CD = 0.47            # Drag coefficient of a sphere
+RADIUS = 0.05        # Radius of projectile (m)
+MASS = 0.5           # Mass of projectile (kg)
+
+# Cross-sectional area of projectile
+AREA = np.pi * (RADIUS ** 2)
+
+# Numerical simulation timestep
+DT = 0.001
+
+
+# =========================================================
+# ACCELERATION CALCULATION
+# =========================================================
+
+def compute_acceleration(
+    velocity_x: float,
+    velocity_y: float,
+    wind_speed: float,
+    height: float,
+    drag: bool
+) -> tuple[float, float]:
     """
-    Simulates the flight of a projectile with or without air resistance. Returns: (list of x and y coordinates and final range)
+    Computes acceleration components caused by gravity
+    and air resistance.
+
+    Parameters:
+        velocity_x (float): Horizontal velocity
+        velocity_y (float): Vertical velocity
+        wind_speed (float): Horizontal wind speed
+        height (float): Current projectile height
+        drag (bool): Enables/disables drag force
+
+    Returns:
+        tuple:
+            acceleration_x (float)
+            acceleration_y (float)
     """
-    
-    angle_rad = numpy.radians(angle_deg)
 
-    # Initial components
-    vx = v0 * numpy.cos(angle_rad)
-    vy = v0 * numpy.sin(angle_rad)
+    # Relative velocity between projectile and air
+    relative_velocity_x = velocity_x + wind_speed
+    relative_velocity_y = velocity_y
 
-    x, y = 0.0, 0.0
-    x_path = [x]
-    y_path = [y]
+    # Magnitude of relative velocity
+    relative_velocity = np.sqrt(
+        relative_velocity_x**2 +
+        relative_velocity_y**2
+    )
 
-    while y >= 0:
-        # Velocity relative to air
-        v_rel_x = vx + v_wind
-        v_rel_y = vy     # No vertical wind
+    # Atmospheric density decreases with altitude
+    air_density = RHO * np.exp(
+        (-MM * G * height) / (R * T)
+    )
 
-        # Total velocity
-        v_rel = numpy.sqrt(v_rel_x**2 + v_rel_y**2)
+    # Drag coefficient factor
+    drag_factor = (
+        (air_density * CD * AREA) / (2 * MASS)
+        if drag else 0.0
+    )
 
-        # Forces (Fd = 0.5 * rho * v^2 * Cd * A)
-        # a = Fd/m -> we include one 'v' in the drag_factor to handle components easily
-        if drag:
-            drag_val = 0.5 * RHO * v_rel * CD * AREA / MASS
-        else:
-            drag_val = 0.0
+    # Drag force acts opposite to motion
+    acceleration_x = (
+        -drag_factor *
+        relative_velocity *
+        relative_velocity_x
+    )
 
-        ax = -(drag_val * v_rel_x)
-        ay = - G - (drag_val * v_rel_y)
+    acceleration_y = (
+        -G -
+        drag_factor *
+        relative_velocity *
+        relative_velocity_y
+    )
 
-        # Updating Velocities
-        vx += ax * DT
-        vy += ay * DT
+    return acceleration_x, acceleration_y
 
-        # Updating Positions
-        x += vx * DT
-        y += vy * DT
 
-        # Store Positions
-        x_path.append(x)
-        y_path.append(y)
+# =========================================================
+# EULER METHOD SIMULATION
+# =========================================================
 
-        # Prevent infinite loops
-        if len(x_path) > 100000:
+def simulate_euler(
+    initial_velocity: float,
+    launch_angle_deg: float,
+    wind_speed: float,
+    drag: bool = True
+) -> tuple[list[float], list[float], float]:
+    """
+    Simulates projectile motion using the Euler Method.
+
+    Euler Method:
+    Uses small timestep approximations to update
+    velocity and position iteratively.
+
+    Returns:
+        tuple:
+            x_positions
+            y_positions
+            final_range
+    """
+
+    # Convert angle to radians
+    launch_angle_rad = np.radians(launch_angle_deg)
+
+    # Initial velocity components
+    velocity_x = initial_velocity * np.cos(launch_angle_rad)
+    velocity_y = initial_velocity * np.sin(launch_angle_rad)
+
+    # Initial position
+    position_x = 0.0
+    position_y = 0.0
+
+    # Lists for plotting trajectory
+    x_positions = [position_x]
+    y_positions = [position_y]
+
+    # Continue until projectile hits ground
+    while position_y >= 0:
+
+        # Compute acceleration
+        acceleration_x, acceleration_y = compute_acceleration(
+            velocity_x,
+            velocity_y,
+            wind_speed,
+            position_y,
+            drag
+        )
+
+        # Update velocity using Euler integration
+        velocity_x += acceleration_x * DT
+        velocity_y += acceleration_y * DT
+
+        # Update position
+        position_x += velocity_x * DT
+        position_y += velocity_y * DT
+
+        # Store trajectory points
+        x_positions.append(position_x)
+        y_positions.append(position_y)
+
+        # Safety guard
+        if len(x_positions) > 100000 or position_x < -10:
             break
-    
-    return x_path, y_path, x
 
-def find_optimal_angle(v0, v_wind, drag=True):
+    return x_positions, y_positions, position_x
+
+
+# =========================================================
+# RK4 METHOD SIMULATION
+# =========================================================
+
+def simulate_rk4(
+    initial_velocity: float,
+    launch_angle_deg: float,
+    wind_speed: float,
+    drag: bool = True
+) -> tuple[list[float], list[float], float]:
     """
-    Iterates through angles to find which one produces the maximum range. Returns: (best_angle, best_x_path, best_y_path)
+    Simulates projectile motion using the
+    Fourth-Order Runge-Kutta (RK4) Method.
+
+    RK4 improves numerical accuracy by computing
+    weighted averages of intermediate slopes.
     """
-    best_range = 0.0
-    best_angle = 0.0
-    best_path = ([],[])
 
-    for i in range(0,180):
-        angle = i * 0.5
-        x_pts, y_pts, final_range = run_simulation(v0, angle, v_wind, drag=drag)
+    # Convert launch angle to radians
+    launch_angle_rad = np.radians(launch_angle_deg)
 
-        if final_range > best_range:
-            best_range = final_range
-            best_angle = angle
-            best_path = (x_pts, y_pts)
+    # Initial position
+    position_x = 0.0
+    position_y = 0.0
 
-    return best_angle, best_path[0], best_path[1], best_range
+    # Initial velocity components
+    velocity_x = initial_velocity * np.cos(launch_angle_rad)
+    velocity_y = initial_velocity * np.sin(launch_angle_rad)
+
+    # Lists for trajectory plotting
+    x_positions = [position_x]
+    y_positions = [position_y]
+
+    while position_y >= 0:
+
+        # =================================================
+        # RK4 STAGE 1
+        # =================================================
+
+        k1_vx, k1_vy = compute_acceleration(
+            velocity_x,
+            velocity_y,
+            wind_speed,
+            position_y,
+            drag
+        )
+
+        # =================================================
+        # RK4 STAGE 2
+        # =================================================
+
+        velocity_x_2 = velocity_x + (DT / 2) * k1_vx
+        velocity_y_2 = velocity_y + (DT / 2) * k1_vy
+
+        k2_vx, k2_vy = compute_acceleration(
+            velocity_x_2,
+            velocity_y_2,
+            wind_speed,
+            position_y + (DT / 2) * velocity_y,
+            drag
+        )
+
+        # =================================================
+        # RK4 STAGE 3
+        # =================================================
+
+        velocity_x_3 = velocity_x + (DT / 2) * k2_vx
+        velocity_y_3 = velocity_y + (DT / 2) * k2_vy
+
+        k3_vx, k3_vy = compute_acceleration(
+            velocity_x_3,
+            velocity_y_3,
+            wind_speed,
+            position_y + (DT / 2) * velocity_y_2,
+            drag
+        )
+
+        # =================================================
+        # RK4 STAGE 4
+        # =================================================
+
+        velocity_x_4 = velocity_x + DT * k3_vx
+        velocity_y_4 = velocity_y + DT * k3_vy
+
+        k4_vx, k4_vy = compute_acceleration(
+            velocity_x_4,
+            velocity_y_4,
+            wind_speed,
+            position_y + DT * velocity_y_3,
+            drag
+        )
+
+        # =================================================
+        # UPDATE POSITION
+        # =================================================
+
+        position_x += (DT / 6) * (
+            velocity_x +
+            2 * velocity_x_2 +
+            2 * velocity_x_3 +
+            velocity_x_4
+        )
+
+        position_y += (DT / 6) * (
+            velocity_y +
+            2 * velocity_y_2 +
+            2 * velocity_y_3 +
+            velocity_y_4
+        )
+
+        # =================================================
+        # UPDATE VELOCITY
+        # =================================================
+
+        velocity_x += (DT / 6) * (
+            k1_vx +
+            2 * k2_vx +
+            2 * k3_vx +
+            k4_vx
+        )
+
+        velocity_y += (DT / 6) * (
+            k1_vy +
+            2 * k2_vy +
+            2 * k3_vy +
+            k4_vy
+        )
+
+        # Store trajectory points
+        x_positions.append(position_x)
+        y_positions.append(position_y)
+
+        # Safety guard
+        if len(x_positions) > 100000 or position_x < -10:
+            break
+
+    return x_positions, y_positions, position_x
+
+
+# =========================================================
+# OPTIMAL ANGLE CALCULATION
+# =========================================================
+
+def find_optimal_angle(
+    simulation_function,
+    initial_velocity: float,
+    wind_speed: float,
+    drag: bool = True
+) -> tuple[float, list[float], list[float], float]:
+    """
+    Finds the launch angle that maximizes range.
+    """
+
+    def negative_range(angle_deg):
+        _, _, projectile_range = simulation_function(
+            initial_velocity,
+            angle_deg,
+            wind_speed,
+            drag
+        )
+        return -projectile_range
+
+    result = minimize_scalar(
+        negative_range,
+        bounds=(0, 90),
+        method='bounded'
+    )
+
+    optimal_angle = result.x  # type: ignore[union-attr]  # OptimizeResult uses dynamic attrs
+    optimal_x, optimal_y, optimal_range = simulation_function(
+        initial_velocity,
+        optimal_angle,
+        wind_speed,
+        drag
+    )
+
+    return (
+        optimal_angle,
+        optimal_x,
+        optimal_y,
+        optimal_range
+    )
+
+
+# =========================================================
+# PLOTTING FUNCTION
+# =========================================================
+
+def plot_trajectories(
+    user_x_drag,
+    user_y_drag,
+    user_x_no_drag,
+    user_y_no_drag,
+    optimal_x_drag,
+    optimal_y_drag,
+    optimal_x_no_drag,
+    optimal_y_no_drag,
+    user_angle,
+    optimal_angle_drag,
+    optimal_angle_no_drag,
+    initial_velocity,
+    wind_speed
+):
+    """
+    Plots all projectile trajectories.
+    """
+
+    plt.figure(figsize=(10, 5))
+
+    plt.plot(
+        user_x_drag,
+        user_y_drag,
+        label=f"User Angle ({user_angle:.2f}°) w/ Drag",
+        linewidth=2,
+        color='blue'
+    )
+
+    plt.plot(
+        user_x_no_drag,
+        user_y_no_drag,
+        label=f"User Angle ({user_angle:.2f}°) w/o Drag",
+        linewidth=2,
+        color='red'
+    )
+
+    plt.plot(
+        optimal_x_drag,
+        optimal_y_drag,
+        linestyle='--',
+        label=f"Optimal ({optimal_angle_drag:.2f}°) w/ Drag",
+        color='green'
+    )
+
+    plt.plot(
+        optimal_x_no_drag,
+        optimal_y_no_drag,
+        linestyle='--',
+        label=f"Optimal ({optimal_angle_no_drag:.2f}°) w/o Drag",
+        color='yellow'
+    )
+
+    plt.axhline(lw=1, color='black')
+
+    plt.title(
+        f"Projectile Motion "
+        f"(v₀ = {initial_velocity} m/s, "
+        f"wind = {wind_speed} m/s)"
+    )
+
+    plt.xlabel("Distance (m)")
+    plt.ylabel("Height (m)")
+
+    plt.grid(True)
+    plt.legend()
+
+    plt.show()
+
+
+# =========================================================
+# MAIN PROGRAM
+# =========================================================
 
 def main():
+    """
+    Main program execution.
+    """
+
+    print("\nProjectile Motion Simulator")
+    print("-----------------------------")
+    print("1. Euler Method")
+    print("2. RK4 Method")
+
+    method_choice = input(
+        "\nChoose numerical method (1 or 2): "
+    )
+
+    if method_choice == "1":
+        simulation_function = simulate_euler
+        method_name = "Euler Method"
+
+    elif method_choice == "2":
+        simulation_function = simulate_rk4
+        method_name = "RK4 Method"
+
+    else:
+        print("Invalid choice.")
+        return
+
     try:
-        user_v0 = float(input("Enter Initial Velocity (m/s): "))
-        user_angle = float(input("Enter Launch Angle (degrees): "))
-        user_v_wind = float(input("Enter Wind Speed (m/s, positive for tailwind, negative for headwind): "))
-        user_drag_str = input("Include drag? (y/n): ").strip().lower()
+        initial_velocity = float(
+            input("\nEnter Initial Velocity (m/s): ")
+        )
+
+        launch_angle = float(
+            input("Enter Launch Angle (degrees): ")
+        )
+
+        wind_speed = float(
+            input(
+                "Enter Wind Speed "
+                "(positive = headwind, "
+                "negative = tailwind): "
+            )
+        )
+
     except ValueError:
         print("Invalid input. Please enter numbers.")
         return
 
-    user_drag = user_drag_str == 'y'
+    print(f"\nUsing: {method_name}")
 
-    # Simulation for user input
-    u_x_drag, u_y_drag, u_range_drag = run_simulation(user_v0, user_angle, user_v_wind, drag=True)
-    u_x_nodrag, u_y_nodrag, u_range_nodrag = run_simulation(user_v0, user_angle, user_v_wind, drag=False)
+    # =====================================================
+    # USER TRAJECTORIES
+    # =====================================================
 
-    # Optimizer
-    opt_angle_drag, opt_x_drag, opt_y_drag, opt_range_drag = find_optimal_angle(user_v0, user_v_wind, drag=True)
-    opt_angle_nodrag, opt_x_nodrag, opt_y_nodrag, opt_range_nodrag = find_optimal_angle(user_v0, user_v_wind, drag=False)
+    user_x_drag, user_y_drag, user_range_drag = simulation_function(
+        initial_velocity,
+        launch_angle,
+        wind_speed,
+        drag=True
+    )
 
-    print(f"\n---Results---")
-    print(f"User Drag Choice: {'Yes' if user_drag else 'No'}")
-    print(f"[With Drag]")
-    print(f"User angle: {user_angle} | Range: {u_range_drag:.2f}")
-    print(f"Optimal angle: {opt_angle_drag} | Range: {opt_range_drag:.2f}")
-    print(f"[Without Drag]")
-    print(f"User angle: {user_angle} | Range: {u_range_nodrag:.2f}")
-    print(f"Optimal angle: {opt_angle_nodrag} | Range: {opt_range_nodrag:.2f}")
+    user_x_no_drag, user_y_no_drag, user_range_no_drag = simulation_function(
+        initial_velocity,
+        launch_angle,
+        wind_speed,
+        drag=False
+    )
 
-    # Plotting
-    plot.figure(figsize=(10, 5))
-    plot.plot(u_x_drag, u_y_drag, label=f"User Angle ({user_angle}°) w/ Drag", color='blue', linewidth=2)
-    plot.plot(u_x_nodrag, u_y_nodrag, label=f"User Angle ({user_angle}°) w/o Drag", color='cyan', linewidth=2)
-    plot.plot(opt_x_drag, opt_y_drag, label=f"Optimal Angle ({opt_angle_drag}°) w/ Drag", color='red', linestyle='--')
-    plot.plot(opt_x_nodrag, opt_y_nodrag, label=f"Optimal Angle ({opt_angle_nodrag}°) w/o Drag", color='orange', linestyle='--')
-    
-    plot.axhline(0, color='black', lw=1) # Ground line
-    plot.title(f"Projectile Motion (v0 = {user_v0} m/s and v-wind = {user_v_wind} m/s)")
-    plot.xlabel("Distance (m)")
-    plot.ylabel("Height (m)")
-    plot.legend()
-    plot.grid(True, linestyle=':', alpha=0.6)
-    plot.show()
+    # =====================================================
+    # OPTIMAL ANGLES
+    # =====================================================
 
+    optimal_angle_drag, optimal_x_drag, optimal_y_drag, optimal_range_drag = find_optimal_angle(
+        simulation_function,
+        initial_velocity,
+        wind_speed,
+        drag=True
+    )
+
+    optimal_angle_no_drag, optimal_x_no_drag, optimal_y_no_drag, optimal_range_no_drag = find_optimal_angle(
+        simulation_function,
+        initial_velocity,
+        wind_speed,
+        drag=False
+    )
+
+    # =====================================================
+    # RESULTS
+    # =====================================================
+
+    print("\n--- Results ---")
+
+    print(
+        f"[With Drag] "
+        f"User {launch_angle}° → "
+        f"{user_range_drag:.2f} m | "
+        f"Optimal {optimal_angle_drag:.2f}° → "
+        f"{optimal_range_drag:.2f} m"
+    )
+
+    print(
+        f"[Without Drag] "
+        f"User {launch_angle}° → "
+        f"{user_range_no_drag:.2f} m | "
+        f"Optimal {optimal_angle_no_drag:.2f}° → "
+        f"{optimal_range_no_drag:.2f} m"
+    )
+
+    # =====================================================
+    # PLOT TRAJECTORIES
+    # =====================================================
+
+    plot_trajectories(
+        user_x_drag,
+        user_y_drag,
+        user_x_no_drag,
+        user_y_no_drag,
+        optimal_x_drag,
+        optimal_y_drag,
+        optimal_x_no_drag,
+        optimal_y_no_drag,
+        launch_angle,
+        optimal_angle_drag,
+        optimal_angle_no_drag,
+        initial_velocity,
+        wind_speed
+    )
+
+
+# =========================================================
+# PROGRAM ENTRY POINT
+# =========================================================
 
 if __name__ == "__main__":
     main()
