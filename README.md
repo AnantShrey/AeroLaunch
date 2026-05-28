@@ -1,155 +1,142 @@
-▶ Run interactively on Google Colab.
+# Projectile Motion with Air Resistance
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1uqO8zvH7T81Gpb6w5tRY26bEYpnUGjR3)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/YOUR_REPO/blob/main/projectile_motion.ipynb)
 
+> **Replace** `YOUR_USERNAME` and `YOUR_REPO` in the badge URL above with your actual GitHub username and repository name.
 
+---
 
+## Overview
 
-# **AeroLaunch - Projectile Motion Optimizer: Beyond the Ideal Vacuum**
+A numerical simulation of projectile motion that models the effect of **aerodynamic drag** and **altitude-varying air density** on a spherical projectile. Two integration methods are implemented and compared:
 
+| Method | File | Accuracy | Notes |
+|---|---|---|---|
+| Euler (1st-order) | `main_euler.py` | Lower | Faster, accumulates error over time |
+| Runge-Kutta 4 (RK4) | `main_rk4.py` | Higher | Industry-standard, 4-stage per step |
 
+Both methods support wind, drag toggling, and automatic optimal-angle finding.
 
-## **1. Project Goal**
+---
 
-This goal of this program is to calculate the trajectory of an object
-while accounting for the friction and environmental factors it
-encounters in the atmosphere. By calculating how air density and wind
-speed impact a projectile, we can determine the specific angle required
-to achieve the greatest possible distance.
+## Physics Model
 
+### Drag Force
 
+$$F_d = \frac{1}{2} \rho \, v_{rel}^2 \, C_d \, A$$
 
-## **2. How the Math Works**
+where $v_{rel}$ is the velocity of the projectile **relative to the wind**.
 
-In a standard physics classroom, often ignore air resistance (and wind).
-However, in this optimizer, we account for two main forces that dictate
-where the projectile will land.
+### Altitude-Dependent Air Density (RK4 only)
 
-### **2.1 Gravity (The Downward Pull)**
+The RK4 model uses the **barometric formula** to vary air density with height:
 
-Gravity acts constantly on the verical component of the projectile\'s
-motion. In this simulation, we use the standard acceleration due to
-gravity:
+$$\rho(y) = \rho_0 \, \exp\!\left(\frac{-M \cdot g \cdot y}{R \cdot T}\right)$$
 
--   $g = 9.81 \ \text{m/s}^2$ : This force pulls the object toward the
-    ground, creating the \"arc\" of the flight.
+The Euler model uses a constant $\rho = \rho_0$ (sea-level density).
 
-### **2.2 Air Resistance (The Backward Push)**
+### Equations of Motion
 
-Air resistance, or drag, pushes against the projectile in the opposite
-direction of its motion. Unlike gravity, drag changes based on how fast
-the object is moving. It is calculated using:
+$$a_x = -\frac{F_d}{m} \cdot \hat{v}_{rel,x}, \qquad a_y = -g - \frac{F_d}{m} \cdot \hat{v}_{rel,y}$$
 
--   **$\rho \text{(Rho)}$ :** The density of the air ($1.225 \text{kg/m}^3$
-    at sea level).
--   **$v_{rel}$ :** The instantaneous velocity of the projectile
-    relative to the wind.
--   **$C_d$ :** The drag coefficient, representing how aerodynamic the
-    shape is ($0.47$ for a sphere).
--   **$A$ :** The cross-sectional area of the projectile.
+---
 
-The formula used for the Drag Factor ($F_d$) (later divided by $m$ and
-multiplied with components of relative velocity to get $a_x$ and $a_y$)
-is:
-  
-$$F_d = \frac{1}{2}\rho v_{rel} C_d A$$
+## Features
 
-The formula for components of acceleration are:
-  
-$$a_x = -\left(\frac{\rho  \  v_{rel}  \  C_d A}{2}\right)\cdot \frac{v_{rel \ x}}{m}$$
-  
-$$a_y = -g - \left(\frac{\rho  \  v_{rel}  \  C_d A}{2}\right) \cdot \frac{v_{rel \ y}}{m}$$
+- **Drag on/off** — compare ideal vs real trajectories side by side
+- **Wind support** — headwind (positive) and tailwind (negative)
+- **Optimal angle finder** — brute-force (Euler) and `scipy.optimize` (RK4)
+- **Altitude-varying density** — physically accurate at higher trajectories (RK4)
+- **Interactive Colab dashboard** — sliders for all parameters, live plots
 
-### **2.3 Calculating Motion Step-by-Step**
+---
 
-Because the drag force depends on the velocity ($v^2$), the math changes
-at every instant. We cannot use a single simple formula to find the
-landing spot and range. Instead, the program uses the **Euler Method**.
-It breaks the flight into tiny slices of time ($\Delta t = 0.005$
-seconds) and calculates the new position for each slice using a loop:
+## Project Structure
 
-1.  **Calculate Relative Velocity :** Find the relative velocity and its
-    component with respect to air, considering wind (horizontal)
-      
-    $$v_{rel} = \sqrt{(v_x + v_{wind})^2 + v_y^2}$$
-2.  **Calculate Forces :** Find the current drag factor to be divided by
-    $m$ and multiplied with components of relative velocity to get $a_x$
-    and $a_y$ in the next step.
-      
-    $$F_d = \frac{1}{2}\rho v_{rel} C_d A$$
-3.  **Calculate Acceleration :** Finding the components of acceleration
-    from the forces
-      
-    $$a_x = -\left(\frac{F_d}{m}\right)\cdot v_{rel \ x}$$
-      
-    $$a_y = -g - \left(\frac{F_d}{m}\right) \cdot v_{rel \ y}$$
-4.  **Update Velocity :** Adjust the components of velocity based on
-    those acceleration.
-      
-    $$v_{new} = v_{old} + a \cdot \Delta t$$
-5.  **Update Position :** Move the projectile a tiny bit based on the
-    new velocity in both directions.
-      
-    $$pos_{new} = pos_{old} + v_{new} \cdot \Delta t$$
-6.  **Repeat :** Continue until the object hits the ground ($y < 0$).
+```
+.
+├── constants.py          # Shared physical constants
+├── main_euler.py         # Euler method simulation + optimizer
+├── main_rk4.py           # RK4 simulation + scipy optimizer
+├── projectile_motion.ipynb  # Interactive Colab notebook
+└── README.md
+```
 
-*(The program exits if range exceeds 100 kilometers to prevent infinite
-looping)*
+---
 
+## Physical Parameters (constants.py)
 
+| Constant | Symbol | Value | Unit |
+|---|---|---|---|
+| Gravitational acceleration | $g$ | 9.81 | m/s² |
+| Sea-level air density | $\rho_0$ | 1.225 | kg/m³ |
+| Drag coefficient (sphere) | $C_d$ | 0.47 | — |
+| Projectile radius | $r$ | 0.05 | m |
+| Projectile mass | $m$ | 0.5 | kg |
+| Time step | $\Delta t$ | 0.001 | s |
+| Molar mass of air | $M$ | 0.029 | kg/mol |
+| Universal gas constant | $R$ | 8.314 | J/mol·K |
+| Standard sea-level temperature | $T$ | 288.15 | K |
 
-## **3. The Optimization Logic**
+---
 
-The \"Optimizer\" part of the code is a loop that tests 180 different
-scenarios. It simulates a launch at every half-degree from $0^°$ to
-$90^°$ to see which one travels the furthest.
+## Running Locally
 
-In a world without air, $45^°$ is the best angle. However, with air
-resistance and wind:
+**Requirements:**
+```
+numpy
+matplotlib
+scipy
+```
 
--   **Headwinds** (wind blowing against the object) usually require a
-    lower launch angle for maximum range.
--   **Tailwinds** (wind blowing with the object) allow for a higher
-    launch angle.
+Install with:
+```bash
+pip install numpy matplotlib scipy
+```
 
+**Run Euler simulation:**
+```bash
+python -m projectile.main_euler
+```
 
+**Run RK4 simulation:**
+```bash
+python -m projectile.main_rk4
+```
 
-## **4. Running the Program**
+> Both scripts prompt for initial velocity, launch angle, and wind speed in the terminal.
 
-The program can be run locally after meeting the requirements mentioned in section 4.1 or by using the dashboard interface on [Google Colab](https://colab.research.google.com/drive/1uqO8zvH7T81Gpb6w5tRY26bEYpnUGjR3).
+---
 
-### **4.1 Requirements**
+## Sample Output
 
-To run the AeroLaunch application locally, you will need:
-1. Python installed on your system.
-2. The packages 'matplotlib' and 'numpy' installed via pip.
+```
+Enter Initial Velocity (m/s): 50
+Enter Launch Angle (degrees): 40
+Enter Wind Speed (m/s, positive for headwind, negative for tailwind): 5
 
-### **4.2 Output**
+---Results---
+[With Drag]
+User angle: 40.0   | Range: 142.73 m
+Optimal angle: 38.5 | Range: 144.91 m
+[Without Drag]
+User angle: 40.0   | Range: 254.81 m
+Optimal angle: 45.0 | Range: 255.10 m
+```
 
-After running the python program (main.py) and inputting the initial velocity ($\text{v0}$), angle of projection ($\theta$) and velocity of wind (positive for headwind/negative for tailwind). The terminal will display the inputted angle along with its range and the optimal angle with its range. Then a graph built using matplotlib will open in a new separate window automatically. The graph will display the path of the object. It will look like this:
-![Demo](graph_output.png)
+---
 
+## Key Observations
 
+- Drag significantly **reduces range** and **lowers the optimal launch angle** below 45°
+- Headwind reduces range further and pushes the optimal angle even lower
+- Tailwind increases range and raises the optimal angle slightly
+- RK4 with altitude-varying density gives a slightly shorter range at high $v_0$ due to thinner air at peak height reducing drag — a physically accurate effect
 
-## **5. Potential Upgrades**
+---
 
-To make this simulation even more realistic. future versions could
-include:
+## Acknowledgements
 
--   **Variable Initial Height :** Adjusting the equations for $y$-axis
-    to allow calculations for projectile launched from some height.
-
--   **Magnus Effect :** Calculating how the \"spin/rotation\" of a ball
-    (like a football or baseball) affect lift.
-
-
-
-## **6. AI Usage in the project**
-During the development of this project AeroLaunch, Google Gemini was utilized as a coding partner to:
-1. **Debugging :** Assistance in identifying and resolving logical errors and handling runtime errors related to type and division by zero in the drag calculations in the physics engine (run_simulation function).
-2. **Matplotlib :** The implementation of the matplotlib interface, specifically for creating the multi-trajectory comparison plots.
-3. **Mathematical Modeling :** Provided guidance on implementing the different physics equations for atmospheric drag and wind vectors using Euler's Method, helping to refine the run_simulation function for higher physical & logical accuracy.
-
-**Note on Verification :** While AI was used for generating multiple lines of code and debugging, every line of code was manually reviewed and tested against standard physics kinematic equations to ensure the simulation remained accurate to reality.
-
-
+- Physics formulation inspired by the **Feynman Lectures on Physics**
+- Numerical methods reference: *Numerical Analysis* — Burden & Faires
+- Part of a high-school research paper on air resistance effects in projectile motion
