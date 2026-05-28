@@ -28,13 +28,13 @@ $$\frac{dv_y}{dt} = -g$$
 
 In the atmosphere, a quadratic drag force opposes motion:
 
-$$\mathbf{F}_d = -\frac{1}{2}\,\rho(y)\,C_d\,A\,|\mathbf{v}_{rel}|\,\mathbf{v}_{rel}$$
+$$\mathbf{F}_d = -\frac{1}{2}\ \rho(y)\ C_d\ A\ |\mathbf{v}_{rel}|\ \mathbf{v}_{rel}$$
 
 This gives the coupled acceleration equations:
 
-$$a_x = -\frac{\rho(y)\,C_d\,A}{2m}\,|\mathbf{v}_{rel}|\,v_{rel,x}$$
+$$a_x = -\frac{\rho(y)\ C_d\ A}{2m}\ |\mathbf{v}_{rel}|\ v_{rel x}$$
 
-$$a_y = -g - \frac{\rho(y)\,C_d\,A}{2m}\,|\mathbf{v}_{rel}|\,v_{rel,y}$$
+$$a_y = -g - \frac{\rho(y)\ C_d\ A}{2m}\ |\mathbf{v}_{rel}|\ v_{rel y}$$
 
 Because $|\mathbf{v}_{rel}|$ mixes both velocity components, $a_x$ and $a_y$ are **coupled** — they cannot be solved independently, which is why a numerical method is required.
 
@@ -42,9 +42,9 @@ Because $|\mathbf{v}_{rel}|$ mixes both velocity components, $a_x$ and $a_y$ are
 
 Horizontal wind enters through the air-relative velocity:
 
-$$v_{rel,x} = v_x + v_w \qquad v_{rel,y} = v_y$$
+$$v_{rel x} = v_x + v_w \qquad v_{rel y} = v_y$$
 
-$$|\mathbf{v}_{rel}| = \sqrt{v_{rel,x}^2 + v_{rel,y}^2}$$
+$$|\mathbf{v}_{rel}| = \sqrt{v_{rel x}^2 + v_{rel y}^2}$$
 
 Positive $v_w$ = headwind (opposing motion). Negative $v_w$ = tailwind.
 
@@ -54,7 +54,7 @@ Positive $v_w$ = headwind (opposing motion). Negative $v_w$ = tailwind.
 
 Instead of a constant sea-level density, air density decreases with altitude using the Barometric Formula:
 
-$$\rho(y) = \rho_0 \cdot e^{-\frac{M\,g\,y}{R\,T}}$$
+$$\rho(y) = \rho_0 \cdot e^{-\frac{M\ g\ y}{R\ T}}$$
 
 | Parameter | Value | Description |
 |---|---|---|
@@ -188,7 +188,7 @@ AeroLaunch/
 - **Variable Initial Height** — adjust the y-axis equations to allow launch from an elevated position
 - **Magnus Effect** — model how the spin of a ball creates lift, affecting trajectory
 - **3D Motion** — extend equations to include lateral wind and cross-range displacement
-- **Dynamic Drag Coefficient** — model $C_d$ as a function of Reynolds number $Re = \frac{\rho\,|\mathbf{v}_{rel}|\,D}{\mu}$
+- **Dynamic Drag Coefficient** — model $C_d$ as a function of Reynolds number $Re = \frac{\rho\ |\mathbf{v}_{rel}|\ D}{\mu}$
 
 ---
 
