@@ -1,7 +1,7 @@
 # AeroLaunch — Projectile Motion Optimizer: Beyond the Ideal Vacuum
 
-[Open In Web](https://aerolaunch-anantshrey.streamlit.app/)
-**← Interactive dashboard — runs in your browser, no installation needed**
+**[Interactive dashboard](https://aerolaunch-anantshrey.streamlit.app/)
+ — runs in your browser, no installation needed**
 
 ---
 
