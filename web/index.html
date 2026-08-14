@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroLaunch — Projectile Motion Under Atmospheric Drag</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <header class="hero">
+    <div class="eyebrow">BALLISTIC TRAJECTORY MODEL &nbsp;·&nbsp; RK4 / EULER</div>
+    <h1>AeroLaunch</h1>
+    <p class="lede">
+      A launch angle, an air-density gradient, a crosswind — that's all it takes
+      for the textbook parabola to bend. This console integrates the equations
+      of motion two ways and traces every shot against its own optimal angle.
+    </p>
+  </header>
+
+  <section class="console" id="console">
+
+    <div class="panel controls-panel">
+      <div class="panel-label">FIRING SOLUTION</div>
+
+      <div class="field">
+        <label for="velocity">Muzzle velocity</label>
+        <div class="field-row">
+          <input type="range" id="velocityRange" min="5" max="120" step="1" value="45">
+          <div class="field-value"><input type="number" id="velocity" min="5" max="120" step="1" value="45"><span class="unit">m/s</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="angle">Launch angle</label>
+        <div class="field-row">
+          <input type="range" id="angleRange" min="1" max="89" step="1" value="45">
+          <div class="field-value"><input type="number" id="angle" min="1" max="89" step="1" value="45"><span class="unit">°</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="wind">Wind speed <span class="hint">(+ headwind / − tailwind)</span></label>
+        <div class="field-row">
+          <input type="range" id="windRange" min="-25" max="25" step="1" value="0">
+          <div class="field-value"><input type="number" id="wind" min="-25" max="25" step="1" value="0"><span class="unit">m/s</span></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Integration method</label>
+        <div class="toggle-group" id="methodToggle">
+          <button type="button" class="toggle-btn active" data-method="rk4">RK4</button>
+          <button type="button" class="toggle-btn" data-method="euler">Euler</button>
+        </div>
+      </div>
+
+      <button type="button" id="launchBtn" class="launch-btn">
+        <span class="launch-btn-label">FIRE</span>
+      </button>
+
+      <div class="spec-sheet">
+        <div class="spec-title">Projectile spec</div>
+        <div class="spec-row"><span>Mass</span><span>0.5 kg</span></div>
+        <div class="spec-row"><span>Radius</span><span>0.05 m</span></div>
+        <div class="spec-row"><span>Drag coeff. (Cd)</span><span>0.47</span></div>
+        <div class="spec-row"><span>ρ (sea level)</span><span>1.225 kg/m³</span></div>
+      </div>
+    </div>
+
+    <div class="panel scope-panel">
+      <div class="panel-label">TRAJECTORY SCOPE</div>
+      <div class="canvas-wrap">
+        <canvas id="trajectoryCanvas"></canvas>
+        <div class="scope-status" id="scopeStatus">STANDBY</div>
+      </div>
+      <div class="legend" id="legend">
+        <div class="legend-item"><span class="swatch swatch-drag"></span>User angle · with drag</div>
+        <div class="legend-item"><span class="swatch swatch-vacuum"></span>User angle · no drag</div>
+        <div class="legend-item"><span class="swatch swatch-optimal-drag"></span>Optimal · with drag</div>
+        <div class="legend-item"><span class="swatch swatch-optimal-vacuum"></span>Optimal · no drag</div>
+      </div>
+    </div>
+
+    <div class="panel readout-panel">
+      <div class="panel-label">IMPACT RANGE</div>
+
+      <div class="readout" data-key="userDrag">
+        <div class="readout-label">User angle · drag</div>
+        <div class="readout-value"><span class="digits">0.0</span><span class="unit">m</span></div>
+      </div>
+      <div class="readout" data-key="userVacuum">
+        <div class="readout-label">User angle · no drag</div>
+        <div class="readout-value"><span class="digits">0.0</span><span class="unit">m</span></div>
+      </div>
+      <div class="readout" data-key="optDrag">
+        <div class="readout-label">Optimal · drag <span class="readout-angle"></span></div>
+        <div class="readout-value"><span class="digits">0.0</span><span class="unit">m</span></div>
+      </div>
+      <div class="readout" data-key="optVacuum">
+        <div class="readout-label">Optimal · no drag <span class="readout-angle"></span></div>
+        <div class="readout-value"><span class="digits">0.0</span><span class="unit">m</span></div>
+      </div>
+
+      <div class="delta-note" id="deltaNote">Drag costs <span id="deltaPct">—</span> of theoretical range at this angle.</div>
+    </div>
+
+  </section>
+
+  <section class="explainer">
+    <div class="explainer-col">
+      <h2>What's being integrated</h2>
+      <p>
+        Each step resolves gravity against a drag force opposing the projectile's
+        velocity relative to the air, drag = ½ρC<sub>d</sub>A·v²/m. Air density
+        itself falls off with altitude by the barometric formula, so a shot that
+        climbs higher meets thinner air on the way up than the way down.
+      </p>
+    </div>
+    <div class="explainer-col">
+      <h2>RK4 vs. Euler</h2>
+      <p>
+        Euler advances position and velocity with a single slope evaluation per
+        step — fast, but it drifts on curved trajectories. RK4 samples the slope
+        four times per step and blends them, staying accurate even as drag bends
+        the path away from a parabola.
+      </p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span>AeroLaunch — a projectile motion research project by Anant Shrey.</span>
+  </footer>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
