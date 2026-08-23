@@ -22,6 +22,28 @@ const AREA = Math.PI * RADIUS * RADIUS;
 const DT = 0.004;
 const MAX_STEPS = 20000;
 
+// The simulation loop can only detect that the projectile has
+// crossed y = 0 *after* it has already gone below ground, so
+// the raw final point overshoots the true landing spot by up
+// to one timestep. This is an O(DT) error independent of the
+// integrator's own order of accuracy. Linearly interpolating
+// between the last above-ground point and the first below-
+// ground point removes it, and also mutates the trajectory
+// arrays in place so the plotted tracer lands exactly at y=0.
+function interpolateLanding(xs, ys) {
+  const n = ys.length;
+  if (n < 2 || ys[n - 1] >= 0) return xs[n - 1];
+
+  const yPrev = ys[n - 2], yLast = ys[n - 1];
+  const xPrev = xs[n - 2], xLast = xs[n - 1];
+  const frac = yPrev / (yPrev - yLast);
+  const landingX = xPrev + frac * (xLast - xPrev);
+
+  xs[n - 1] = landingX;
+  ys[n - 1] = 0;
+  return landingX;
+}
+
 function computeAcceleration(vx, vy, wind, height, drag) {
   const relVx = vx + wind;
   const relVy = vy;
@@ -52,7 +74,7 @@ function simulateEuler(v0, angleDeg, wind, drag) {
     xs.push(x); ys.push(y);
     if (xs.length > MAX_STEPS || x < -10) break;
   }
-  return { xs, ys, range: x };
+  return { xs, ys, range: interpolateLanding(xs, ys) };
 }
 
 function simulateRK4(v0, angleDeg, wind, drag) {
@@ -87,7 +109,7 @@ function simulateRK4(v0, angleDeg, wind, drag) {
     xs.push(x); ys.push(y);
     if (xs.length > MAX_STEPS || x < -10) break;
   }
-  return { xs, ys, range: x };
+  return { xs, ys, range: interpolateLanding(xs, ys) };
 }
 
 function simulate(method, v0, angleDeg, wind, drag) {

@@ -181,7 +181,37 @@ def simulate_euler(
         if len(x_positions) > 100000 or position_x < -10:
             break
 
-    return x_positions, y_positions, position_x
+    # =====================================================
+    # LANDING POINT INTERPOLATION
+    # =====================================================
+    # The loop above can only detect that the projectile has
+    # crossed y = 0 *after* it has already gone below ground,
+    # so the raw final point overshoots the true landing spot
+    # by up to one timestep. This introduces an O(DT) error
+    # regardless of the integration method's own order of
+    # accuracy. Linearly interpolating between the last
+    # above-ground point and the first below-ground point
+    # removes this endpoint error.
+    final_range = position_x
+
+    if len(y_positions) >= 2 and y_positions[-1] < 0:
+        y_prev = y_positions[-2]
+        y_last = y_positions[-1]
+        x_prev = x_positions[-2]
+        x_last = x_positions[-1]
+
+        # Fraction of the final timestep at which y = 0
+        frac = y_prev / (y_prev - y_last)
+
+        landing_x = x_prev + frac * (x_last - x_prev)
+
+        # Replace the below-ground point with the true landing point
+        x_positions[-1] = landing_x
+        y_positions[-1] = 0.0
+
+        final_range = landing_x
+
+    return x_positions, y_positions, final_range
 
 
 # =========================================================
@@ -320,7 +350,30 @@ def simulate_rk4(
         if len(x_positions) > 100000 or position_x < -10:
             break
 
-    return x_positions, y_positions, position_x
+    # =====================================================
+    # LANDING POINT INTERPOLATION
+    # =====================================================
+    # Same reasoning as in simulate_euler(): without this,
+    # the returned range overshoots by up to one timestep,
+    # capping the *empirical* convergence order at O(DT) no
+    # matter how accurate the underlying integrator is.
+    final_range = position_x
+
+    if len(y_positions) >= 2 and y_positions[-1] < 0:
+        y_prev = y_positions[-2]
+        y_last = y_positions[-1]
+        x_prev = x_positions[-2]
+        x_last = x_positions[-1]
+
+        frac = y_prev / (y_prev - y_last)
+        landing_x = x_prev + frac * (x_last - x_prev)
+
+        x_positions[-1] = landing_x
+        y_positions[-1] = 0.0
+
+        final_range = landing_x
+
+    return x_positions, y_positions, final_range
 
 
 # =========================================================
